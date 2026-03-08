@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Config (jangan commit file konfigurasi yang berisi stream key!)
+.youtube_live_config.json
+
+# Logs
+/var/log/youtube_live/
+*.log
+
+# Video files
+*.mp4
+*.mkv
+*.avi
+*.mov
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

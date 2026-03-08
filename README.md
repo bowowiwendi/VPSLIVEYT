@@ -1,95 +1,376 @@
+# YouTube Live Streaming Manager
 
-# Setup Server dan Live Streaming YouTube dengan FFmpeg dan gdown
+Sistem otomatis untuk mengelola live streaming YouTube dengan FFmpeg, mendukung **multi-streaming** ke berbagai platform sekaligus.
 
-Proyek ini menjelaskan langkah-langkah untuk mengatur server Ubuntu agar dapat digunakan untuk live streaming di YouTube menggunakan **FFmpeg**. Selain itu, akan dijelaskan cara mengelola sesi dengan **tmux** dan mendownload video dari Google Drive menggunakan **gdown**.
-
-## Persyaratan
-- **Server Ubuntu** dengan akses root
-- **VPS atau server cloud** (misalnya DigitalOcean, AWS, atau lainnya)
-- **Stream Key YouTube**
+![Python](https://img.shields.io/badge/Python-3.6+-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 ---
 
-## Langkah-Langkah Instalasi
+## 📋 Fitur
 
-1. **Update dan upgrade sistem:**
-   ```bash
-   sudo apt update && sudo apt upgrade -y
-   ```
-
-2. **Install tmux:**
-   ```bash
-   sudo apt install tmux -y
-   ```
-
-3. **Install FFmpeg:**
-   ```bash
-   sudo apt install ffmpeg -y
-   ```
-
-4. **Install Python3 dan pip:**
-   ```bash
-   sudo apt install python3 python3-pip -y
-   ```
-
-5. **Install gdown untuk download file dari Google Drive:**
-   ```bash
-   pip install gdown
-   ```
+- ✅ **Interactive CLI Menu** - Menu berbasis teks yang mudah digunakan
+- ✅ **Multi-Streaming** - Stream ke YouTube, Facebook, Twitch, TikTok sekaligus
+- ✅ **Setup Otomatis** - Install semua dependencies dengan satu perintah
+- ✅ **Easy Configuration** - Simpan Stream Key dan konfigurasi dalam file JSON
+- ✅ **One-Click Streaming** - Mulai live streaming dengan command sederhana
+- ✅ **Real-time Monitoring** - Dashboard monitoring dengan update langsung
+- ✅ **Session Management** - Kelola sesi streaming dengan tmux
+- ✅ **Google Drive Download** - Download video langsung dari Google Drive
+- ✅ **Logging** - Semua aktivitas tercatat dalam file log
+- ✅ **Duration Limit** - Atur durasi streaming (misal: 10 jam)
 
 ---
 
-## Menggunakan gdown untuk Mengunduh Video
+## 🚀 Quick Start
 
-Unduh video dari Google Drive dengan perintah berikut:
+### 1. Install Dependencies
+
 ```bash
-gdown https://drive.google.com/uc?id=your_file_id
+# Clone atau download repository ini
+cd /path/to/VPSLIVEYT
+
+# Jalankan installation script
+sudo ./install.sh
 ```
 
-Ganti `your_file_id` dengan **ID file Google Drive** Anda.
+### 2. Gunakan Interactive CLI Menu (RECOMMENDED)
+
+```bash
+# Jalankan menu interaktif
+python3 youtube_live.py menu
+# atau
+python3 cli_menu.py
+```
+
+Dari menu, Anda bisa:
+- Setup konfigurasi
+- Start/stop streaming
+- Setup multi-streaming
+- Monitor status
+- Download dari Google Drive
+
+### 3. Setup Konfigurasi (Manual)
+
+```bash
+# Setup dengan stream key
+python3 youtube_live.py setup -k YOUR_YOUTUBE_STREAM_KEY
+
+# Atau setup interaktif
+python3 youtube_live.py setup
+```
+
+### 4. Mulai Streaming
+
+```bash
+# Single stream (continuous looping)
+python3 youtube_live.py start
+
+# Streaming dengan durasi (misal 10 jam)
+python3 youtube_live.py start -d 10
+
+# Multi-stream ke semua platform yang dikonfigurasi
+python3 youtube_live.py multi-start
+```
+
+### 5. Monitor
+
+```bash
+# Cek status
+python3 youtube_live.py status
+
+# Monitor real-time (simple)
+python3 youtube_live.py monitor
+
+# Monitor dengan dashboard interaktif
+python3 monitor.py -i
+```
 
 ---
 
-## Mengelola Sesi tmux
+## 📖 Command Reference
 
-**1. Mulai sesi baru:**
+### youtube_live.py
+
+| Command | Deskripsi |
+|---------|-----------|
+| `menu` | **Interactive CLI menu** (recommended!) |
+| `setup` | Setup konfigurasi (stream key, video path, session name) |
+| `start` | Mulai single live streaming |
+| `stop` | Stop live streaming |
+| `status` | Tampilkan status lengkap |
+| `monitor` | Monitor real-time simple |
+| `download` | Download video dari Google Drive |
+| `list` | List semua tmux sessions |
+| `check` | Cek dependencies |
+| `multi-start` | Start multi-streaming ke semua platform |
+| `multi-stop` | Stop semua multi-streams |
+
+### cli_menu.py - Interactive Menu
+
+Menu interaktif dengan opsi:
+- 📋 **Setup Configuration** - Set stream key, video path, session name
+- 🔴 **Start Single Stream** - Mulai streaming tunggal
+- 📡 **Multi-Streaming** - Setup & manage multi-platform streaming
+- 📊 **Status** - Lihat status semua streams
+- 🔍 **Monitor** - Real-time monitoring
+- ⏹️ **Stop Streaming** - Stop stream
+- 📥 **Download** - Download dari Google Drive
+- 🛠️ **Tools** - Utilities & system info
+
+### Options
+
+| Option | Deskripsi |
+|--------|-----------|
+| `-k, --stream-key` | YouTube Stream Key |
+| `-v, --video` | Path ke video file |
+| `-n, --name` | Nama sesi tmux |
+| `-d, --duration` | Durasi streaming (jam) |
+| `-o, --output` | Output path untuk download |
+| `--url` | URL Google Drive untuk download |
+
+### Examples
+
 ```bash
-tmux new -s Mainan
+# Setup konfigurasi
+python3 youtube_live.py setup -k ABCD-1234-EFGH-5678
+
+# Mulai streaming dengan video custom
+python3 youtube_live.py start -v /home/user/myvideo.mp4
+
+# Streaming 5 jam dengan session name custom
+python3 youtube_live.py start -n MyStream -d 5
+
+# Download dari Google Drive
+python3 youtube_live.py download https://drive.google.com/uc?id=FILE_ID
+
+# Download dengan nama file custom
+python3 youtube_live.py download https://drive.google.com/uc?id=FILE_ID -o /root/live.mp4
+
+# Multi-streaming
+python3 youtube_live.py multi-start
+python3 youtube_live.py multi-stop
+
+# Interactive menu
+python3 youtube_live.py menu
 ```
 
-**2. Monitoring sesi tmux yang sudah ada:**
-```bash
-tmux attach -t Hujan
+### monitor.py
+
+| Option | Deskripsi |
+|--------|-----------|
+| `-i, --interactive` | Mode interaktif dengan keyboard shortcuts |
+| `-n, --name` | Session name untuk monitor |
+
+### Interactive Mode Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `S` | Start streaming |
+| `R` | Restart streaming |
+| `L` | View full logs |
+| `C` | Clear screen |
+| `Q` | Quit monitor |
+
+---
+
+## 📁 Struktur File
+
+```
+VPSLIVEYT/
+├── youtube_live.py      # Main script untuk manage streaming
+├── cli_menu.py          # Interactive CLI menu
+├── monitor.py           # Dashboard monitoring
+├── install.sh           # Installation script
+├── config.template.json # Template konfigurasi
+├── README.md            # Dokumentasi
+└── .gitignore          # Git ignore rules
 ```
 
-**3. Menghentikan sesi tmux:**
+### Config File Location
+
+Konfigurasi disimpan di: `~/.youtube_live_config.json`
+
+Format:
+```json
+{
+  "stream_key": "YOUR_STREAM_KEY",
+  "video_path": "/root/live.mp4",
+  "session_name": "youtube_live"
+}
+```
+
+### Multi-Stream Config Location
+
+Multi-stream konfigurasi disimpan di: `~/.youtube_live_multi_config.json`
+
+Format:
+```json
+{
+  "streams": [
+    {
+      "platform": "youtube",
+      "session_name": "youtube_multi_1",
+      "stream_key": "YOUR_YT_KEY",
+      "rtmp_url": "rtmp://a.rtmp.youtube.com/live2"
+    },
+    {
+      "platform": "facebook",
+      "session_name": "facebook_live",
+      "stream_key": "YOUR_FB_KEY",
+      "rtmp_url": "rtmps://live-api-s.facebook.com:443/rtmp"
+    }
+  ]
+}
+```
+
+### Log File Location
+
+Log disimpan di: `/var/log/youtube_live/`
+
+---
+
+## 🔧 Manual Installation
+
+Jika tidak menggunakan `install.sh`:
+
 ```bash
-tmux kill-session -t Hujan
+# Update sistem
+sudo apt update && sudo apt upgrade -y
+
+# Install dependencies
+sudo apt install -y ffmpeg tmux python3 python3-pip
+
+# Install gdown
+pip3 install gdown
+
+# Create log directory
+sudo mkdir -p /var/log/youtube_live
+sudo chmod 755 /var/log/youtube_live
+
+# Set executable
+chmod +x youtube_live.py monitor.py
 ```
 
 ---
 
-## Live Streaming ke YouTube Menggunakan FFmpeg
+## 🎯 Cara Mendapatkan Stream Key YouTube
 
-Untuk memulai live streaming di YouTube, gunakan perintah berikut:
-```bash
-ffmpeg -stream_loop -1 -re -i /root/live.mp4 -f flv -c:v copy -c:a copy rtmp://a.rtmp.youtube.com/live2/your_StreamKey
-```
-
-Untuk memulai live streaming di YouTube dengan timeout, misalnya ingin live 10 jam saja maka gunakan perintah berikut:
-```bash
-timeout 10h ffmpeg -stream_loop -1 -re -i /root/live.mp4 -f flv -c:v copy -c:a copy rtmp://a.rtmp.youtube.com/live2/your_StreamKey
-```
-
-
-### Penjelasan:
-- **`/root/live.mp4`**: Path file video Anda (pastikan file ini sudah ada di server).
-- **`your_StreamKey`**: Ganti dengan Stream Key dari YouTube Live.
+1. Buka [YouTube Studio](https://studio.youtube.com/)
+2. Klik **Create** → **Go Live**
+3. Di tab **Stream**, copy **Stream Key**
+4. ⚠️ **PENTING**: Jangan share stream key Anda!
 
 ---
 
-## Catatan
-- Gunakan **tmux** untuk menjalankan FFmpeg sehingga live streaming tetap berjalan meskipun Anda keluar dari sesi SSH.
-- Jangan lupa memastikan bahwa video Anda telah diunggah atau tersedia di server.
+## 📡 Multi-Streaming Setup
+
+Streaming ke multiple platform sekaligus (YouTube, Facebook, Twitch, TikTok, dll).
+
+### Cara Setup via CLI Menu (Recommended)
+
+```bash
+python3 youtube_live.py menu
+```
+
+Pilih menu **3. Multi-Streaming**, lalu:
+1. Add Stream untuk setiap platform
+2. Masukkan Stream Key masing-masing
+3. Start All Streams
+
+### Supported Platforms
+
+| Platform | RTMP URL |
+|----------|----------|
+| YouTube | `rtmp://a.rtmp.youtube.com/live2` |
+| Facebook | `rtmps://live-api-s.facebook.com:443/rtmp` |
+| Twitch | `rtmp://live.twitch.tv/app` |
+| TikTok | `rtmp://push.tiktok.com/live` |
+| Custom | Masukkan RTMP URL sendiri |
+
+### Cara Manual
+
+```bash
+# Start semua multi-streams
+python3 youtube_live.py multi-start
+
+# Stop semua multi-streams
+python3 youtube_live.py multi-stop
+```
 
 ---
+
+## 🛠️ Troubleshooting
+
+### "Stream Key belum diatur"
+```bash
+python3 youtube_live.py setup -k YOUR_STREAM_KEY
+```
+
+### "Video file tidak ditemukan"
+Pastikan video ada di path yang benar:
+```bash
+ls -la /root/live.mp4
+```
+
+Atau gunakan video lain:
+```bash
+python3 youtube_live.py start -v /path/to/your/video.mp4
+```
+
+### "Dependencies missing"
+```bash
+sudo ./install.sh
+# atau
+python3 youtube_live.py check
+```
+
+### "Sesi sudah berjalan"
+Stop sesi yang ada atau gunakan nama berbeda:
+```bash
+# Stop sesi existing
+python3 youtube_live.py stop
+
+# Atau gunakan nama session baru
+python3 youtube_live.py start -n NewSession
+```
+
+### FFmpeg error / koneksi terputus
+- Cek koneksi internet
+- Pastikan Stream Key valid
+- Cek log: `tail -f /var/log/youtube_live/*.log`
+
+---
+
+## 📊 Monitoring Dashboard
+
+Dashboard monitoring menampilkan:
+- 🟢 Status streaming (LIVE/OFFLINE)
+- ⏱️ Uptime sesi
+- 💻 CPU, Memory, Disk usage
+- 🎬 Active FFmpeg processes
+- 📋 Recent logs
+
+---
+
+## 🔐 Security Notes
+
+- ⚠️ **Jangan commit** file konfigurasi (`~/.youtube_live_config.json`) ke Git
+- ⚠️ **Jangan share** Stream Key YouTube Anda
+- File `.gitignore` sudah dikonfigurasi untuk mencegah commit konfigurasi sensitif
+
+---
+
+## 📝 License
+
+MIT License - Silakan digunakan dan dimodifikasi.
+
+---
+
+## 🤝 Support
+
+Jika ada masalah atau pertanyaan, silakan buat issue di repository ini.
+
+---
+
+**Happy Streaming! 🎥🔴**
