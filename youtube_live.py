@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 CONFIG_FILE = Path.home() / ".youtube_live_config.json"
+AUTO_RESTART_FILE = Path.home() / ".youtube_live_auto_restart.json"
 LOG_DIR = Path("/var/log/youtube_live")
 DEFAULT_VIDEO_PATH = "/root/live.mp4"
 RTMP_URL = "rtmp://a.rtmp.youtube.com/live2"
@@ -33,6 +34,55 @@ def save_config(config):
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=2)
     print(f"✓ Konfigurasi disimpan ke {CONFIG_FILE}")
+
+
+def load_auto_restart_config():
+    """Load auto-restart konfigurasi."""
+    if AUTO_RESTART_FILE.exists():
+        with open(AUTO_RESTART_FILE, "r") as f:
+            return json.load(f)
+    return {"enabled": False, "interval_hours": 6, "sessions": []}
+
+
+def save_auto_restart_config(config):
+    """Simpan auto-restart konfigurasi."""
+    AUTO_RESTART_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(AUTO_RESTART_FILE, "w") as f:
+        json.dump(config, f, indent=2)
+    print(f"✓ Auto-restart konfigurasi disimpan")
+
+
+class Colors:
+    """ANSI color codes."""
+    RED = "\033[91m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    BOLD = "\033[1m"
+    RESET = "\033[0m"
+
+
+def print_header(title):
+    print(f"\n{Colors.CYAN}{Colors.BOLD}{'═' * 60}{Colors.RESET}")
+    print(f"{Colors.CYAN}{Colors.BOLD}  {title}{Colors.RESET}")
+    print(f"{Colors.CYAN}{Colors.BOLD}{'═' * 60}{Colors.RESET}\n")
+
+
+def print_success(msg):
+    print(f"{Colors.GREEN}✓ {msg}{Colors.RESET}")
+
+
+def print_error(msg):
+    print(f"{Colors.RED}✗ {msg}{Colors.RESET}")
+
+
+def print_warning(msg):
+    print(f"{Colors.YELLOW}⚠ {msg}{Colors.RESET}")
+
+
+def print_info(msg):
+    print(f"{Colors.CYAN}ℹ {msg}{Colors.RESET}")
 
 
 def setup_config(stream_key=None, video_path=None, session_name=None):
@@ -415,6 +465,153 @@ def stop_multi_stream():
     return True
 
 
+def enable_auto_restart(interval_hours=6, sessions=None):
+    """Enable auto-restart untuk streaming."""
+    config = load_auto_restart_config()
+    config["enabled"] = True
+    config["interval_hours"] = interval_hours
+    if sessions:
+        config["sessions"] = sessions
+    save_auto_restart_config(config)
+    print_success(f"✓ Auto-restart diaktifkan (interval: {interval_hours} jam)")
+
+
+def disable_auto_restart():
+    """Disable auto-restart."""
+    config = load_auto_restart_config()
+    config["enabled"] = False
+    save_auto_restart_config(config)
+    print_success("✓ Auto-restart dinonaktifkan")
+
+
+def get_auto_restart_status():
+    """Dapatkan status auto-restart."""
+    config = load_auto_restart_config()
+    return config
+
+
+def auto_restart_stream(session_name=None, video_path=None, duration=None):
+    """Restart sebuah stream."""
+    config = load_config()
+    
+    session_name = session_name or config.get("session_name", "youtube_live")
+    video_path = video_path or config.get("video_path", DEFAULT_VIDEO_PATH)
+    
+    # Stop existing session
+    if get_session_status(session_name):
+        subprocess.run(f"tmux kill-session -t {session_name}", shell=True)
+        print(f"  ✓ Stopped: {session_name}")
+    
+    # Start new session
+    stream_key = config.get("stream_key")
+    if not stream_key:
+        print_error("Stream Key belum disetel!")
+        return False
+    
+    if not Path(video_path).exists():
+        print_error(f"Video file tidak ditemukan: {video_path}")
+        return False
+    
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    log_file = LOG_DIR / f"{session_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    
+    ffmpeg_cmd = [
+        "ffmpeg",
+        "-stream_loop", "-1",
+        "-re",
+        "-i", video_path,
+        "-f", "flv",
+        "-c:v", "copy",
+        "-c:a", "copy",
+        f"{RTMP_URL}/{stream_key}"
+    ]
+    
+    if duration:
+        ffmpeg_cmd = ["timeout", f"{duration}h"] + ffmpeg_cmd
+    
+    cmd_str = " ".join(ffmpeg_cmd)
+    tmux_cmd = f"tmux new -d -s {session_name} '{cmd_str} 2>&1 | tee {log_file}'"
+    
+    try:
+        subprocess.run(tmux_cmd, shell=True, check=True)
+        print_success(f"✓ Restarted: {session_name}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print_error(f"✗ Failed restart: {session_name} - {e}")
+        return False
+
+
+def auto_restart_all_streams():
+    """Auto-restart semua streams yang aktif."""
+    multi_config_file = Path.home() / ".youtube_live_multi_config.json"
+    
+    print_info("Auto-restarting all streams...")
+    
+    # Restart single stream
+    config = load_config()
+    session_name = config.get("session_name", "youtube_live")
+    if get_session_status(session_name):
+        auto_restart_stream(session_name)
+    
+    # Restart multi-streams
+    if multi_config_file.exists():
+        with open(multi_config_file, "r") as f:
+            multi_config = json.load(f)
+        
+        for stream in multi_config.get("streams", []):
+            sess = stream.get("session_name", "")
+            if sess and get_session_status(sess):
+                # Stop
+                subprocess.run(f"tmux kill-session -t {sess}", shell=True)
+                
+                # Start again
+                video_path = config.get("video_path", DEFAULT_VIDEO_PATH)
+                stream_key = stream.get("stream_key", "")
+                rtmp_url = stream.get("rtmp_url", "")
+                
+                if stream_key and rtmp_url:
+                    LOG_DIR.mkdir(parents=True, exist_ok=True)
+                    log_file = LOG_DIR / f"{sess}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+                    
+                    cmd = (
+                        f"ffmpeg -stream_loop -1 -re -i {video_path} "
+                        f"-f flv -c:v copy -c:a copy "
+                        f"{rtmp_url}/{stream_key} "
+                        f"2>&1 | tee {log_file}"
+                    )
+                    tmux_cmd = f"tmux new -d -s {sess} '{cmd}'"
+                    subprocess.run(tmux_cmd, shell=True)
+                    print_success(f"  Restarted: {sess}")
+    
+    print_success("Auto-restart complete!")
+
+
+def run_auto_restart_daemon():
+    """Jalankan daemon untuk auto-restart."""
+    config = load_auto_restart_config()
+    
+    if not config.get("enabled", False):
+        print_warning("Auto-restart tidak aktif")
+        return
+    
+    interval = config.get("interval_hours", 6)
+    interval_seconds = interval * 3600
+    
+    print_success(f"Auto-restart daemon started (interval: {interval} jam)")
+    print_info(f"Next restart: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    try:
+        while True:
+            time.sleep(interval_seconds)
+            
+            print_info(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Auto-restart triggered!")
+            auto_restart_all_streams()
+            print_info(f"Next restart in {interval} hours...")
+            
+    except KeyboardInterrupt:
+        print("\n✓ Auto-restart daemon stopped.")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="YouTube Live Streaming Manager",
@@ -431,13 +628,16 @@ Examples:
   python3 youtube_live.py multi-start        # Start multi-streaming
   python3 youtube_live.py multi-stop         # Stop semua multi-streams
   python3 youtube_live.py menu               # Interactive CLI menu
+  python3 youtube_live.py auto-restart       # Setup auto-restart
+  python3 youtube_live.py auto-restart-now   # Restart sekarang
         """
     )
-    
+
     parser.add_argument("command", nargs="?", choices=[
-        "setup", "start", "stop", "status", "monitor", 
-        "download", "list", "check", "multi-start", 
-        "multi-stop", "menu"
+        "setup", "start", "stop", "status", "monitor",
+        "download", "list", "check", "multi-start",
+        "multi-stop", "menu", "auto-restart", 
+        "auto-restart-now", "auto-restart-daemon"
     ], help="Command untuk dijalankan")
     
     parser.add_argument("-k", "--stream-key", help="YouTube Stream Key")
@@ -506,13 +706,48 @@ Examples:
             video_path=args.video,
             duration=args.duration
         )
-    
+
     elif args.command == "multi-stop":
         stop_multi_stream()
-    
+
     elif args.command == "menu":
         # Launch interactive CLI menu
         subprocess.run(["python3", str(Path(__file__).parent / "cli_menu.py")])
+
+    elif args.command == "auto-restart":
+        # Interactive auto-restart setup
+        print_header("AUTO-RESTART SETUP")
+        config = load_auto_restart_config()
+        
+        print(f"  Status      : {'✓ Enabled' if config.get('enabled') else '✗ Disabled'}")
+        print(f"  Interval    : {config.get('interval_hours', 6)} jam")
+        
+        print("\n  Options:")
+        print("  1. Enable auto-restart")
+        print("  2. Disable auto-restart")
+        print("  3. Set interval")
+        print("  4. Restart now")
+        
+        choice = input("\n  Pilihan [1-4]: ").strip()
+        
+        if choice == "1":
+            interval = input(f"  Interval (jam) [{config.get('interval_hours', 6)}]: ").strip()
+            interval = int(interval) if interval.isdigit() else config.get('interval_hours', 6)
+            enable_auto_restart(interval_hours=interval)
+        elif choice == "2":
+            disable_auto_restart()
+        elif choice == "3":
+            interval = input("  Interval (jam): ").strip()
+            if interval.isdigit():
+                enable_auto_restart(interval_hours=int(interval))
+        elif choice == "4":
+            auto_restart_all_streams()
+
+    elif args.command == "auto-restart-now":
+        auto_restart_all_streams()
+
+    elif args.command == "auto-restart-daemon":
+        run_auto_restart_daemon()
 
 
 if __name__ == "__main__":

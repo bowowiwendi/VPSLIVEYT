@@ -361,18 +361,55 @@ def simple_monitor():
 
 def main():
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="YouTube Live Streaming Monitor")
-    parser.add_argument("-i", "--interactive", action="store_true", 
+    parser.add_argument("-i", "--interactive", action="store_true",
                         help="Interactive mode dengan keyboard shortcuts")
     parser.add_argument("-n", "--name", help="Session name untuk monitor")
+    parser.add_argument("--menu", action="store_true",
+                        help="Show menu with back option")
     args = parser.parse_args()
-    
+
     config = get_config()
     if args.name:
         config["session_name"] = args.name
-    
-    if args.interactive:
+
+    if args.menu:
+        # Show menu with back option
+        while True:
+            clear_screen()
+            print(f"{Colors.CYAN}{Colors.BOLD}")
+            print("╔" + "═" * 58 + "╗")
+            print("║" + " " * 15 + "🔍 MONITORING MENU" + " " * 23 + "║")
+            print("╚" + "═" * 58 + "╝")
+            print(f"{Colors.RESET}")
+            
+            running, _ = get_session_status(config.get("session_name", "youtube_live"))
+            status = f"{Colors.GREEN}🟢 LIVE{Colors.RESET}" if running else f"{Colors.RED}⚫ OFFLINE{Colors.RESET}"
+            
+            print(f"  Session: {config.get('session_name', 'youtube_live')}")
+            print(f"  Status : {status}")
+            print()
+            print("  1. Start Monitoring")
+            print("  2. Interactive Dashboard")
+            print("  0. Back to Main Menu")
+            print()
+            
+            choice = input(f"{Colors.YELLOW}  Pilihan: {Colors.RESET}").strip()
+            
+            if choice == "1":
+                simple_monitor()
+            elif choice == "2":
+                if sys.stdin.isatty():
+                    interactive_monitor()
+                else:
+                    print("Interactive mode requires a TTY.")
+                    time.sleep(1)
+            elif choice == "0":
+                # Launch main menu
+                subprocess.run(["python3", str(Path(__file__).parent / "cli_menu.py")])
+                break
+    elif args.interactive:
         # Cek apakah terminal mendukung
         if sys.stdin.isatty():
             interactive_monitor()

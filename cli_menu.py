@@ -14,6 +14,7 @@ from pathlib import Path
 
 CONFIG_FILE = Path.home() / ".youtube_live_config.json"
 MULTI_CONFIG_FILE = Path.home() / ".youtube_live_multi_config.json"
+AUTO_RESTART_FILE = Path.home() / ".youtube_live_auto_restart.json"
 LOG_DIR = Path("/var/log/youtube_live")
 
 # RTMP URLs untuk berbagai platform
@@ -99,6 +100,21 @@ def load_multi_config():
 def save_multi_config(config):
     MULTI_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(MULTI_CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
+
+
+def load_auto_restart_config():
+    """Load auto-restart konfigurasi."""
+    if AUTO_RESTART_FILE.exists():
+        with open(AUTO_RESTART_FILE, "r") as f:
+            return json.load(f)
+    return {"enabled": False, "interval_hours": 6}
+
+
+def save_auto_restart_config(config):
+    """Simpan auto-restart konfigurasi."""
+    AUTO_RESTART_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(AUTO_RESTART_FILE, "w") as f:
         json.dump(config, f, indent=2)
 
 
@@ -464,27 +480,40 @@ def menu_monitor():
     """Real-time monitoring menu."""
     clear_screen()
     print_header("🔍 REAL-TIME MONITOR")
-    
+
     config = load_config()
     session_name = config.get("session_name", "youtube_live")
+
+    print(f"  Session: {session_name}")
+    print()
+    print("  1. Start Simple Monitor")
+    print("  2. Interactive Dashboard")
+    print("  0. Kembali")
+    print()
     
-    print(f"  Monitoring: {session_name}")
-    print(f"  Press Ctrl+C to stop\n")
+    choice = input(f"{Colors.YELLOW}  Pilihan: {Colors.RESET}").strip()
     
-    try:
-        while True:
-            is_live = get_session_status(session_name)
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            
-            if is_live:
-                status = f"{Colors.GREEN}🟢 LIVE{Colors.RESET}"
-            else:
-                status = f"{Colors.RED}⚫ OFFLINE{Colors.RESET}"
-            
-            print(f"[{timestamp}] {status}", end="\r")
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print(f"\n{Colors.GREEN}✓ Monitoring stopped.{Colors.RESET}")
+    if choice == "1":
+        print(f"\n  Monitoring: {session_name}")
+        print(f"  Press Ctrl+C to stop\n")
+        try:
+            while True:
+                is_live = get_session_status(session_name)
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                if is_live:
+                    status = f"{Colors.GREEN}🟢 LIVE{Colors.RESET}"
+                else:
+                    status = f"{Colors.RED}⚫ OFFLINE{Colors.RESET}"
+                print(f"[{timestamp}] {status}", end="\r")
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print(f"\n{Colors.GREEN}✓ Monitoring stopped.{Colors.RESET}")
+    
+    elif choice == "2":
+        # Launch interactive monitor
+        subprocess.run(["python3", str(Path(__file__).parent / "monitor.py"), "-i"])
+    
+    # Returns to main menu automatically
 
 
 def menu_stop():
@@ -571,6 +600,59 @@ def menu_download():
     input("\n  Tekan Enter untuk lanjut...")
 
 
+def menu_auto_restart():
+    """Auto-restart configuration menu."""
+    clear_screen()
+    print_header("⏰ AUTO-RESTART CONFIGURATION")
+    
+    auto_config = load_auto_restart_config()
+    
+    print_section("Current Status")
+    status = f"{Colors.GREEN}✓ Enabled{Colors.RESET}" if auto_config.get("enabled") else f"{Colors.RED}✗ Disabled{Colors.RESET}"
+    print(f"  Status   : {status}")
+    print(f"  Interval : {auto_config.get('interval_hours', 6)} jam")
+    
+    print_section("Auto-Restart Options")
+    print("  1. Enable Auto-Restart")
+    print("  2. Disable Auto-Restart")
+    print("  3. Set Interval")
+    print("  4. Restart Now (Manual)")
+    print("  5. Start Daemon (Background)")
+    print("  0. Kembali")
+    
+    choice = input(f"\n{Colors.YELLOW}Pilihan: {Colors.RESET}").strip()
+    
+    if choice == "1":
+        interval = input(f"  Interval (jam) [{auto_config.get('interval_hours', 6)}]: ").strip()
+        if interval.isdigit():
+            save_auto_restart_config({"enabled": True, "interval_hours": int(interval)})
+            print_success("Auto-restart enabled!")
+        else:
+            save_auto_restart_config({"enabled": True, "interval_hours": auto_config.get('interval_hours', 6)})
+            print_success("Auto-restart enabled!")
+    
+    elif choice == "2":
+        save_auto_restart_config({"enabled": False, "interval_hours": auto_config.get('interval_hours', 6)})
+        print_success("Auto-restart disabled!")
+    
+    elif choice == "3":
+        interval = input("  Interval (jam): ").strip()
+        if interval.isdigit():
+            save_auto_restart_config({"enabled": auto_config.get("enabled", False), "interval_hours": int(interval)})
+            print_success(f"Interval set to {interval} jam!")
+    
+    elif choice == "4":
+        print_info("Restarting all streams...")
+        subprocess.run(["python3", str(Path(__file__).parent / "youtube_live.py"), "auto-restart-now"])
+    
+    elif choice == "5":
+        print_info("Starting auto-restart daemon...")
+        print_warning("Daemon akan berjalan di background. Tekan Ctrl+C untuk stop.")
+        subprocess.run(["python3", str(Path(__file__).parent / "youtube_live.py"), "auto-restart-daemon"])
+    
+    input("\n  Tekan Enter untuk lanjut...")
+
+
 def menu_tools():
     """Tools and utilities menu."""
     clear_screen()
@@ -644,15 +726,16 @@ def main_menu():
         print("  1. 📋 Setup Configuration")
         print("  2. 🔴 Start Single Stream")
         print("  3. 📡 Multi-Streaming")
-        print("  4. 📊 Status")
-        print("  5. 🔍 Monitor")
-        print("  6. ⏹️ Stop Streaming")
-        print("  7. 📥 Download (Google Drive)")
-        print("  8. 🛠️ Tools")
+        print("  4. ⏰ Auto-Restart")
+        print("  5. 📊 Status")
+        print("  6. 🔍 Monitor")
+        print("  7. ⏹️ Stop Streaming")
+        print("  8. 📥 Download (Google Drive)")
+        print("  9. 🛠️ Tools")
         print("  0. Exit")
         
         choice = input(f"\n{Colors.YELLOW}╭─ Pilihan: {Colors.RESET}").strip()
-        
+
         if choice == "1":
             menu_setup()
         elif choice == "2":
@@ -660,14 +743,16 @@ def main_menu():
         elif choice == "3":
             menu_multi_stream()
         elif choice == "4":
-            menu_status()
+            menu_auto_restart()
         elif choice == "5":
-            menu_monitor()
+            menu_status()
         elif choice == "6":
-            menu_stop()
+            menu_monitor()
         elif choice == "7":
-            menu_download()
+            menu_stop()
         elif choice == "8":
+            menu_download()
+        elif choice == "9":
             menu_tools()
         elif choice == "0":
             print(f"\n{Colors.CYAN}Terima kasih! Happy Streaming! 🎥{Colors.RESET}\n")

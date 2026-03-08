@@ -105,6 +105,9 @@ python3 monitor.py -i
 | `check` | Cek dependencies |
 | `multi-start` | Start multi-streaming ke semua platform |
 | `multi-stop` | Stop semua multi-streams |
+| `auto-restart` | Setup auto-restart configuration |
+| `auto-restart-now` | Restart semua streams sekarang |
+| `auto-restart-daemon` | Jalankan daemon auto-restart |
 
 ### cli_menu.py - Interactive Menu
 
@@ -297,6 +300,53 @@ python3 youtube_live.py multi-start
 # Stop semua multi-streams
 python3 youtube_live.py multi-stop
 ```
+
+---
+
+## ⏰ Auto-Restart Feature
+
+Fitur auto-restart akan **restart streaming secara otomatis** setiap interval tertentu untuk menjaga kestabilan stream.
+
+### Cara Setup
+
+```bash
+# Via interactive menu (recommended)
+python3 youtube_live.py menu
+# Pilih: 4. Auto-Restart
+
+# Atau via command line
+python3 youtube_live.py auto-restart
+```
+
+### Options
+
+| Option | Deskripsi |
+|--------|-----------|
+| Enable | Aktifkan auto-restart dengan interval tertentu |
+| Disable | Matikan auto-restart |
+| Set Interval | Atur interval restart (default: 6 jam) |
+| Restart Now | Restart semua streams manual |
+| Start Daemon | Jalankan daemon di background |
+
+### Contoh Penggunaan
+
+```bash
+# Enable auto-restart setiap 4 jam
+python3 youtube_live.py auto-restart
+# Pilih: 1 (Enable), lalu masukkan: 4
+
+# Restart semua streams sekarang
+python3 youtube_live.py auto-restart-now
+
+# Jalankan daemon (background process)
+python3 youtube_live.py auto-restart-daemon
+```
+
+### Mengapa Auto-Restart?
+
+- 🔄 **Mencegah freeze** - Restart berkala mencegah stream freeze
+- 🛠️ **Recover dari error** - Auto-recover jika ada koneksi terputus
+- ⏱️ **Jadwal otomatis** - Set interval sesuai kebutuhan (rekomendasi: 4-8 jam)
 
 ---
 
