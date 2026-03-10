@@ -1,0 +1,30 @@
+[Unit]
+Description=YouTube Live Streaming Auto-Restart Daemon
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=root
+Group=root
+WorkingDirectory=/workspaces/VPSLIVEYT
+ExecStart=/usr/bin/python3 /workspaces/VPSLIVEYT/auto_restart_daemon.py run
+ExecStop=/usr/bin/python3 /workspaces/VPSLIVEYT/auto_restart_daemon.py stop
+ExecReload=/usr/bin/python3 /workspaces/VPSLIVEYT/auto_restart_daemon.py restart
+Restart=on-failure
+RestartSec=10
+PIDFile=/var/run/youtube_live_daemon.pid
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=youtube-live-daemon
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/log/youtube_live /root /tmp /var/run
+
+[Install]
+WantedBy=multi-user.target

@@ -181,13 +181,16 @@ python3 youtube_live.py menu
 
 ```
 VPSLIVEYT/
-├── youtube_live.py      # Main script untuk manage streaming
-├── cli_menu.py          # Interactive CLI menu
-├── monitor.py           # Dashboard monitoring
-├── install.sh           # Installation script
-├── config.template.json # Template konfigurasi
-├── README.md            # Dokumentasi
-└── .gitignore          # Git ignore rules
+├── youtube_live.py         # Main script untuk manage streaming
+├── cli_menu.py             # Interactive CLI menu
+├── monitor.py              # Dashboard monitoring
+├── auto_restart_daemon.py  # Auto-restart daemon dengan watchdog
+├── setup_service.sh        # Systemd service setup script
+├── install.sh              # Installation script
+├── config.template.json    # Template konfigurasi
+├── youtube-live-daemon.service  # Systemd service file
+├── README.md               # Dokumentasi
+└── .gitignore              # Git ignore rules
 ```
 
 ### Config File Location
@@ -307,15 +310,40 @@ python3 youtube_live.py multi-stop
 
 Fitur auto-restart akan **restart streaming secara otomatis** setiap interval tertentu untuk menjaga kestabilan stream.
 
-### Cara Setup
+### 🆕 Improved Features
+
+- ✅ **Watchdog Monitoring** - Monitor stream health setiap 30 detik
+- ✅ **Auto-Health Check** - Restart otomatis jika stream freeze/stuck
+- ✅ **Tmux-Based Daemon** - Daemon berjalan di tmux session
+- ✅ **Systemd Service** - Install sebagai service untuk auto-start on boot
+- ✅ **Retry Logic** - Maksimal 3 attempt per restart
+- ✅ **Comprehensive Logging** - Semua aktivitas tercatat
+
+### Cara Setup (2 Options)
+
+#### Option 1: Tmux Daemon (Simple)
 
 ```bash
-# Via interactive menu (recommended)
+# Via interactive menu
 python3 youtube_live.py menu
-# Pilih: 4. Auto-Restart
+# Pilih: 4. Auto-Restart > 5. Start Daemon
 
 # Atau via command line
-python3 youtube_live.py auto-restart
+python3 youtube_live.py auto-restart-daemon start
+```
+
+#### Option 2: Systemd Service (Recommended for Production)
+
+```bash
+# Install systemd service
+sudo ./setup_service.sh
+# Pilih: 1. Install service
+
+# Start service
+sudo systemctl start youtube-live-daemon
+
+# Enable auto-start on boot
+sudo systemctl enable youtube-live-daemon
 ```
 
 ### Options
@@ -328,25 +356,46 @@ python3 youtube_live.py auto-restart
 | Restart Now | Restart semua streams manual |
 | Start Daemon | Jalankan daemon di background |
 
-### Contoh Penggunaan
+### Command Reference
 
 ```bash
-# Enable auto-restart setiap 4 jam
+# Setup auto-restart
 python3 youtube_live.py auto-restart
-# Pilih: 1 (Enable), lalu masukkan: 4
 
 # Restart semua streams sekarang
 python3 youtube_live.py auto-restart-now
 
-# Jalankan daemon (background process)
-python3 youtube_live.py auto-restart-daemon
+# Daemon management
+python3 youtube_live.py auto-restart-daemon start    # Start daemon
+python3 youtube_live.py auto-restart-daemon stop     # Stop daemon
+python3 youtube_live.py auto-restart-daemon status   # Check status
+python3 youtube_live.py auto-restart-daemon restart  # Restart daemon
+
+# Systemd commands (jika install service)
+sudo systemctl start youtube-live-daemon
+sudo systemctl stop youtube-live-daemon
+sudo systemctl restart youtube-live-daemon
+sudo systemctl status youtube-live-daemon
+journalctl -u youtube-live-daemon -f    # View logs
 ```
 
 ### Mengapa Auto-Restart?
 
-- 🔄 **Mencegah freeze** - Restart berkala mencegah stream freeze
-- 🛠️ **Recover dari error** - Auto-recover jika ada koneksi terputus
-- ⏱️ **Jadwal otomatis** - Set interval sesuai kebutuhan (rekomendasi: 4-8 jam)
+| Masalah | Solusi |
+|---------|--------|
+| Stream freeze setelah beberapa jam | Restart berkala mencegah freeze |
+| Koneksi terputus tiba-tiba | Auto-detect dan restart |
+| Lupa restart manual | Jadwal otomatis |
+| Server reboot | Systemd auto-start |
+
+### Rekomendasi Interval
+
+| Durasi Stream | Interval Restart |
+|---------------|------------------|
+| < 4 jam | Tidak perlu |
+| 4-8 jam | 4 jam |
+| 8-24 jam | 6 jam |
+| > 24 jam (24/7) | 4-6 jam |
 
 ---
 

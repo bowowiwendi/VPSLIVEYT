@@ -644,12 +644,14 @@ def menu_auto_restart():
     elif choice == "4":
         print_info("Restarting all streams...")
         subprocess.run(["python3", str(Path(__file__).parent / "youtube_live.py"), "auto-restart-now"])
-    
+
     elif choice == "5":
         print_info("Starting auto-restart daemon...")
-        print_warning("Daemon akan berjalan di background. Tekan Ctrl+C untuk stop.")
-        subprocess.run(["python3", str(Path(__file__).parent / "youtube_live.py"), "auto-restart-daemon"])
-    
+        daemon_script = Path(__file__).parent / "auto_restart_daemon.py"
+        subprocess.run(["python3", str(daemon_script), "start"])
+        print_success("Daemon started in tmux session")
+        print_info("View logs: tail -f /var/log/youtube_live/auto_restart_daemon.log")
+
     input("\n  Tekan Enter untuk lanjut...")
 
 

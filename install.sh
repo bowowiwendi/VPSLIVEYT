@@ -75,9 +75,16 @@ print_status "Log directory created: /var/log/youtube_live"
 print_step "Setup Permissions"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 chmod +x "$SCRIPT_DIR/youtube_live.py" 2>/dev/null || true
-chmod +x "$SCRIPT_DIR/monitor.py" 2>/dev/null || true
 chmod +x "$SCRIPT_DIR/cli_menu.py" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/monitor.py" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/auto_restart_daemon.py" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/setup_service.sh" 2>/dev/null || true
 print_status "Script permissions set"
+
+# Create required directories
+print_step "Create Directories"
+mkdir -p /var/run
+print_status "Directories created"
 
 # Summary
 echo ""
@@ -97,5 +104,8 @@ echo "     python3 youtube_live.py status"
 echo ""
 echo "  4. Download video dari Google Drive:"
 echo "     python3 youtube_live.py download https://drive.google.com/uc?id=YOUR_FILE_ID"
+echo ""
+echo "  5. Setup auto-restart daemon (optional):"
+echo "     sudo ./setup_service.sh"
 echo ""
 echo "========================================"

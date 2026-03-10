@@ -729,7 +729,7 @@ Examples:
         print("  4. Restart now")
         
         choice = input("\n  Pilihan [1-4]: ").strip()
-        
+
         if choice == "1":
             interval = input(f"  Interval (jam) [{config.get('interval_hours', 6)}]: ").strip()
             interval = int(interval) if interval.isdigit() else config.get('interval_hours', 6)
@@ -747,7 +747,13 @@ Examples:
         auto_restart_all_streams()
 
     elif args.command == "auto-restart-daemon":
-        run_auto_restart_daemon()
+        # Use new daemon script
+        daemon_script = Path(__file__).parent / "auto_restart_daemon.py"
+        if len(sys.argv) > 2:
+            action = sys.argv[2]
+        else:
+            action = "start"
+        subprocess.run(["python3", str(daemon_script), action])
 
 
 if __name__ == "__main__":
