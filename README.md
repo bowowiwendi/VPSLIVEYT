@@ -9,8 +9,10 @@ Sistem otomatis untuk mengelola live streaming YouTube dengan FFmpeg, mendukung 
 
 ## 📋 Fitur
 
+- ✅ **Web Dashboard** - Mobile-friendly web interface (seperti aplikasi APK)
 - ✅ **Interactive CLI Menu** - Menu berbasis teks yang mudah digunakan
 - ✅ **Multi-Streaming** - Stream ke YouTube, Facebook, Twitch, TikTok sekaligus
+- ✅ **Multi-Video Support** - Gunakan beberapa video untuk stream berbeda
 - ✅ **Setup Otomatis** - Install semua dependencies dengan satu perintah
 - ✅ **Easy Configuration** - Simpan Stream Key dan konfigurasi dalam file JSON
 - ✅ **One-Click Streaming** - Mulai live streaming dengan command sederhana
@@ -19,6 +21,7 @@ Sistem otomatis untuk mengelola live streaming YouTube dengan FFmpeg, mendukung 
 - ✅ **Google Drive Download** - Download video langsung dari Google Drive
 - ✅ **Logging** - Semua aktivitas tercatat dalam file log
 - ✅ **Duration Limit** - Atur durasi streaming (misal: 10 jam)
+- ✅ **Auto-Restart** - Restart otomatis dengan watchdog monitoring
 
 ---
 
@@ -34,7 +37,30 @@ cd /path/to/VPSLIVEYT
 sudo ./install.sh
 ```
 
-### 2. Gunakan Interactive CLI Menu (RECOMMENDED)
+### 2. Gunakan Web Dashboard (RECOMMENDED - Mobile Friendly!)
+
+```bash
+# Start web dashboard
+python3 web_dashboard.py --port 5000
+
+# Akses melalui browser:
+# http://YOUR_SERVER_IP:5000
+```
+
+**Fitur Web Dashboard:**
+- 🏠 **Home** - Quick status dan kontrol stream
+- 📡 **Streams** - Kelola multi-streaming
+- 🎬 **Videos** - Manage video library
+- ⚙️ **Settings** - Konfigurasi sistem
+- 📊 **Monitor** - Real-time monitoring
+
+**Mobile-Friendly Design:**
+- Bottom navigation seperti aplikasi APK
+- Responsive untuk semua ukuran layar
+- Touch-optimized buttons
+- Real-time updates
+
+### 3. Gunakan Interactive CLI Menu
 
 ```bash
 # Jalankan menu interaktif
@@ -181,10 +207,12 @@ python3 youtube_live.py menu
 
 ```
 VPSLIVEYT/
-├── youtube_live.py         # Main script untuk manage streaming
+├── youtube_live.py         # Main CLI script
 ├── cli_menu.py             # Interactive CLI menu
-├── monitor.py              # Dashboard monitoring
+├── web_dashboard.py        # Web dashboard (Flask)
+├── monitor.py              # Terminal monitoring dashboard
 ├── auto_restart_daemon.py  # Auto-restart daemon dengan watchdog
+├── utils.py                # Shared utilities (NO DUPLICATE CODE!)
 ├── setup_service.sh        # Systemd service setup script
 ├── install.sh              # Installation script
 ├── config.template.json    # Template konfigurasi

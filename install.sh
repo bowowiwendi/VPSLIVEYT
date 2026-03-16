@@ -59,11 +59,11 @@ python3 --version
 pip3 --version
 print_status "Python3 & pip installed"
 
-# Step 5: Install gdown
-print_step "Step 5/5: Install gdown"
-pip3 install gdown
-gdown --version 2>/dev/null || echo "gdown installed (version check not available)"
-print_status "gdown installed"
+# Step 5: Install gdown dan Flask
+print_step "Step 5/5: Install Python Packages"
+pip3 install gdown flask
+gdown --version 2>/dev/null || echo "gdown installed"
+print_status "gdown and Flask installed"
 
 # Create log directory
 print_step "Setup Log Directory"
