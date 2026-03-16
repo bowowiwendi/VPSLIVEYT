@@ -348,7 +348,7 @@ def list_sessions():
             capture_output=True,
             text=True
         )
-        
+
         if result.stdout:
             print("\n📺 Active TMUX Sessions:")
             print("-" * 40)
@@ -359,6 +359,133 @@ def list_sessions():
             print("Tidak ada sesi tmux aktif.")
     except Exception as e:
         print(f"Error: {e}")
+
+
+# ==================== DUAL STREAM SUPPORT ====================
+
+def start_dual_stream(video_path_1=None, stream_key_1=None, session_name_1=None,
+                      video_path_2=None, stream_key_2=None, session_name_2=None,
+                      rtmp_url=None):
+    """
+    Start 2 simultaneous streams with different videos.
+    Each stream runs independently with its own video and stream key.
+    """
+    config = load_config()
+    rtmp_url = rtmp_url or RTMP_URL
+
+    # Stream 1 configuration
+    video_path_1 = video_path_1 or config.get("video_path", DEFAULT_VIDEO_PATH)
+    stream_key_1 = stream_key_1 or config.get("stream_key")
+    session_name_1 = session_name_1 or config.get("session_name", "youtube_live") + "_1"
+
+    # Stream 2 configuration  
+    video_path_2 = video_path_2 or config.get("video_path", DEFAULT_VIDEO_PATH)
+    stream_key_2 = stream_key_2 or config.get("stream_key")
+    session_name_2 = session_name_2 or config.get("session_name", "youtube_live") + "_2"
+
+    # Validate configurations
+    if not stream_key_1 or not stream_key_2:
+        print_error("Both stream keys must be provided!")
+        return False
+
+    if not Path(video_path_1).exists():
+        print_error(f"Video 1 not found: {video_path_1}")
+        return False
+
+    if not Path(video_path_2).exists():
+        print_error(f"Video 2 not found: {video_path_2}")
+        return False
+
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+    streams_started = 0
+
+    # Start Stream 1
+    if not get_session_status(session_name_1):
+        log_file_1 = LOG_DIR / f"{session_name_1}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        cmd_1 = f"ffmpeg -stream_loop -1 -re -i {video_path_1} -f flv -c:v copy -c:a copy {rtmp_url}/{stream_key_1} 2>&1 | tee {log_file_1}"
+        tmux_cmd_1 = f"tmux new -d -s {session_name_1} '{cmd_1}'"
+
+        try:
+            subprocess.run(tmux_cmd_1, shell=True, check=True)
+            time.sleep(2)
+            if get_session_status(session_name_1):
+                print_success(f"Stream 1 started: {session_name_1} (Video: {video_path_1})")
+                streams_started += 1
+            else:
+                print_error(f"Stream 1 failed to start: {session_name_1}")
+        except subprocess.CalledProcessError as e:
+            print_error(f"Stream 1 error: {e}")
+    else:
+        print_warning(f"Stream 1 already running: {session_name_1}")
+
+    # Start Stream 2
+    if not get_session_status(session_name_2):
+        log_file_2 = LOG_DIR / f"{session_name_2}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        cmd_2 = f"ffmpeg -stream_loop -1 -re -i {video_path_2} -f flv -c:v copy -c:a copy {rtmp_url}/{stream_key_2} 2>&1 | tee {log_file_2}"
+        tmux_cmd_2 = f"tmux new -d -s {session_name_2} '{cmd_2}'"
+
+        try:
+            subprocess.run(tmux_cmd_2, shell=True, check=True)
+            time.sleep(2)
+            if get_session_status(session_name_2):
+                print_success(f"Stream 2 started: {session_name_2} (Video: {video_path_2})")
+                streams_started += 1
+            else:
+                print_error(f"Stream 2 failed to start: {session_name_2}")
+        except subprocess.CalledProcessError as e:
+            print_error(f"Stream 2 error: {e}")
+    else:
+        print_warning(f"Stream 2 already running: {session_name_2}")
+
+    print(f"\n✓ {streams_started}/2 streams started")
+    if streams_started > 0:
+        print(f"  Monitor: python3 youtube_live.py status")
+        print(f"  Stop both: python3 youtube_live.py dual-stream-stop")
+
+    return streams_started > 0
+
+
+def stop_dual_stream(session_name_1=None, session_name_2=None):
+    """Stop both dual streams."""
+    config = load_config()
+    session_name_1 = session_name_1 or config.get("session_name", "youtube_live") + "_1"
+    session_name_2 = session_name_2 or config.get("session_name", "youtube_live") + "_2"
+
+    stopped = 0
+
+    if get_session_status(session_name_1):
+        stop_session(session_name_1)
+        print_success(f"Stream 1 stopped: {session_name_1}")
+        stopped += 1
+    else:
+        print_warning(f"Stream 1 not running: {session_name_1}")
+
+    if get_session_status(session_name_2):
+        stop_session(session_name_2)
+        print_success(f"Stream 2 stopped: {session_name_2}")
+        stopped += 1
+    else:
+        print_warning(f"Stream 2 not running: {session_name_2}")
+
+    print(f"\n✓ {stopped}/2 streams stopped")
+    return stopped
+
+
+def get_dual_stream_status():
+    """Get status of dual streams."""
+    config = load_config()
+    session_name_1 = config.get("session_name", "youtube_live") + "_1"
+    session_name_2 = config.get("session_name", "youtube_live") + "_2"
+
+    status_1 = get_session_status(session_name_1)
+    status_2 = get_session_status(session_name_2)
+
+    return {
+        "stream_1": {"session": session_name_1, "active": status_1},
+        "stream_2": {"session": session_name_2, "active": status_2},
+        "both_active": status_1 and status_2
+    }
 
 
 def start_multi_stream(video_path=None, duration=None):
@@ -754,6 +881,41 @@ Examples:
         else:
             action = "start"
         subprocess.run(["python3", str(daemon_script), action])
+
+    elif args.command == "dual-stream":
+        # Interactive dual stream setup
+        print_header("DUAL STREAM SETUP")
+        print("  Start 2 simultaneous streams with different videos")
+        print()
+        
+        # Get configuration
+        v1 = input("  Video 1 path [/root/live.mp4]: ").strip() or "/root/live.mp4"
+        k1 = input("  Stream Key 1: ").strip()
+        n1 = input("  Session Name 1 [youtube_live_1]: ").strip() or "youtube_live_1"
+        
+        v2 = input("  Video 2 path: ").strip()
+        k2 = input("  Stream Key 2: ").strip()
+        n2 = input("  Session Name 2 [youtube_live_2]: ").strip() or "youtube_live_2"
+        
+        if not k1 or not k2 or not v2:
+            print_error("All fields required!")
+        else:
+            start_dual_stream(
+                video_path_1=v1, stream_key_1=k1, session_name_1=n1,
+                video_path_2=v2, stream_key_2=k2, session_name_2=n2
+            )
+
+    elif args.command == "dual-stream-stop":
+        stop_dual_stream()
+
+    elif args.command == "dual-stream-status":
+        status = get_dual_stream_status()
+        print_header("DUAL STREAM STATUS")
+        s1 = status["stream_1"]
+        s2 = status["stream_2"]
+        print(f"  Stream 1 ({s1['session']}): {'🟢 LIVE' if s1['active'] else '⚫ OFFLINE'}")
+        print(f"  Stream 2 ({s2['session']}): {'🟢 LIVE' if s2['active'] else '⚫ OFFLINE'}")
+        print(f"  Both Active: {'✓ Yes' if status['both_active'] else '✗ No'}")
 
 
 if __name__ == "__main__":

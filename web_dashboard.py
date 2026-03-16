@@ -727,6 +727,31 @@ def api_sys_check():
     ok, missing = check_dependencies()
     return jsonify({'all_installed': ok, 'missing': missing})
 
+# ==================== Dual Stream API ====================
+
+@app.route('/api/dual/start', methods=['POST'])
+def api_dual_start():
+    data = request.json or {}
+    s1 = data.get('stream1', {})
+    s2 = data.get('stream2', {})
+    from youtube_live import start_dual_stream
+    result = start_dual_stream(
+        video_path_1=s1.get('video'), stream_key_1=s1.get('key'), session_name_1=s1.get('session'),
+        video_path_2=s2.get('video'), stream_key_2=s2.get('key'), session_name_2=s2.get('session')
+    )
+    return jsonify({'message': 'Dual stream started' if result else 'Failed', 'success': result})
+
+@app.route('/api/dual/stop', methods=['POST'])
+def api_dual_stop():
+    from youtube_live import stop_dual_stream
+    result = stop_dual_stream()
+    return jsonify({'message': 'Dual stream stopped', 'success': result})
+
+@app.route('/api/dual/status')
+def api_dual_status():
+    from youtube_live import get_dual_stream_status
+    return jsonify(get_dual_stream_status())
+
 if __name__ == '__main__':
     import argparse
     p = argparse.ArgumentParser()
